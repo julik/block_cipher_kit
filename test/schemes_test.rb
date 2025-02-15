@@ -3,13 +3,16 @@
 require_relative "test_helper"
 
 class SchemesTest < Minitest::Test
-  [
-    "BlockCipherKit::PassthruScheme",
+  SCHEME_NAMES = [
     "BlockCipherKit::AES256CFBScheme",
+    "BlockCipherKit::AES256CFBCIVScheme",
     "BlockCipherKit::AES256CTRScheme",
     "BlockCipherKit::AES256GCMScheme",
     "BlockCipherKit::AES256CBCScheme"
-  ].each do |scheme_class_name|
+  ]
+  SCHEME_NAMES_INCLUDING_PASSTHRU = SCHEME_NAMES + ["BlockCipherKit::PassthruScheme"]
+
+  SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
     define_method "test_scheme #{scheme_class_name} encrypts and decrypts correctly, including random access" do
       assert_encrypts_from_block_and_io(scheme_class_name)
       assert_decrypts_into_block_and_io(scheme_class_name)
@@ -17,23 +20,13 @@ class SchemesTest < Minitest::Test
     end
   end
 
-  [
-    "BlockCipherKit::AES256CFBScheme",
-    "BlockCipherKit::AES256CTRScheme",
-    "BlockCipherKit::AES256GCMScheme",
-    "BlockCipherKit::AES256CBCScheme"
-  ].each do |scheme_class_name|
-    define_method("test_scheme #{scheme_class_name} provides different ciphertext depending on key") do
+  SCHEME_NAMES.each do |scheme_class_name|
+    define_method("test_scheme #{scheme_class_name} outputs different ciphertext depending on key") do
       assert_key_changes_ciphertext(scheme_class_name)
     end
   end
 
-  [
-    "BlockCipherKit::AES256CFBScheme",
-    "BlockCipherKit::AES256CTRScheme",
-    "BlockCipherKit::AES256GCMScheme",
-    "BlockCipherKit::AES256CBCScheme"
-  ].each do |scheme_class_name|
+  SCHEME_NAMES.each do |scheme_class_name|
     define_method "test_scheme #{scheme_class_name} fails to initialise with a key too small" do
       tiny_key = Random.new.bytes(3)
       assert_raises(ArgumentError) do
@@ -42,17 +35,12 @@ class SchemesTest < Minitest::Test
     end
   end
 
-  [
-    "BlockCipherKit::AES256CFBScheme",
-    "BlockCipherKit::AES256CTRScheme",
-    "BlockCipherKit::AES256GCMScheme",
-    "BlockCipherKit::AES256CBCScheme"
-  ].each do |scheme_class_name|
+  SCHEME_NAMES.each do |scheme_class_name|
     define_method "test_scheme #{scheme_class_name} does not expose key material in #inspect" do
-      big_key = "wonderful and incredible easiness of being, combined with unearthly pleasures"
+      big_key = "wonderful, absolutely incredible easiness of being, combined with unearthly pleasures"
       inspectable = resolve(scheme_class_name).new(big_key).inspect
       big_key.split(/\s/).each do |word|
-        refute inspectable.include?(word), "#inspect must not reveal key material"
+        refute inspectable.include?(word), "Output of #inspect must not reveal key material - was #{inspectable.inspect}"
       end
     end
   end
@@ -85,18 +73,30 @@ class SchemesTest < Minitest::Test
     # block offsets are not used for reading.
     plaintext = rng.bytes(OpenSSL::BN.generate_prime(12))
 
-    out1 = StringIO.new
+    out1 = StringIO.new.binmode
     scheme.streaming_encrypt(into_ciphertext_io: out1) do |writable|
       writable.write(plaintext.byteslice(0, 417))
       writable.write(plaintext.byteslice(417, plaintext.bytesize))
     end
     assert out1.size > 0
 
-    out2 = StringIO.new
+    out2 = StringIO.new.binmode
     scheme.streaming_encrypt(from_plaintext_io: StringIO.new(plaintext), into_ciphertext_io: out2)
-    assert out2.size > 0
+    assert_equal out1.size, out2.size, "The size of the encrypted message must be the same when outputting via a block or a readable IO"
 
-    assert_equal out1.string, out2.string
+    out1.rewind
+    out2.rewind
+
+    readback1 = StringIO.new.binmode.tap do |w|
+      scheme.streaming_decrypt(from_ciphertext_io: out1, into_plaintext_io: w)
+    end.string
+
+    readback2 = StringIO.new.binmode.tap do |w|
+      scheme.streaming_decrypt(from_ciphertext_io: out2, into_plaintext_io: w)
+    end.string
+
+    assert_equal plaintext, readback1
+    assert_equal plaintext, readback2
   end
 
   def assert_decrypts_into_block_and_io(scheme_class_name)

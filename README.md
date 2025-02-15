@@ -31,6 +31,7 @@ Data written by the schemes is compatible with the "bare" uses of the ciphers, w
 * AES-256-CFB - Layout is `[ IV - 16 bytes) ][ Ciphertext in 16 byte blocks]`
 * AES-256-CTR - Layout is `[ nonce - 4 bytes][ IV - 8 bytes ][ Ciphertext in 16 byte blocks]`
 * AES-256-GCM - Layout is `[ nonce - 4 bytes][ IV - 8 bytes ][ Ciphertext in 16 byte blocks][ Validation tag - 16 bytes ]`
+* AES-256-CFB-CIV - Layout is `[ Ciphertext in 16 byte blocks ]`. The `encryption_key` must be `[ key - 32 bytes][ IV - 16 bytes]` (the IV is not stored with ciphertext)
 
 ## Which scheme to use?
 

@@ -11,5 +11,6 @@ module BlockCipherKit
   autoload :AES256CBCScheme, __dir__ + "/block_cipher_kit/aes_256_cbc_scheme.rb"
   autoload :AES256GCMScheme, __dir__ + "/block_cipher_kit/aes_256_gcm_scheme.rb"
   autoload :AES256CFBScheme, __dir__ + "/block_cipher_kit/aes_256_cfb_scheme.rb"
+  autoload :AES256CFBCIVScheme, __dir__ + "/block_cipher_kit/aes_256_cfb_civ_scheme.rb"
   autoload :EncryptedDiskService, __dir__ + "/block_cipher_kit/encrypted_disk_service.rb"
 end

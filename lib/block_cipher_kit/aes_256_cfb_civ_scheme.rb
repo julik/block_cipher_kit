@@ -1,31 +1,29 @@
-class BlockCipherKit::AES256CFBScheme < BlockCipherKit::BaseScheme
-  IV_LENGTH = 16
+require "tempfile"
 
-  def initialize(encryption_key, iv_generator: SecureRandom)
+class BlockCipherKit::AES256CFBCIVScheme < BlockCipherKit::BaseScheme
+  def initialize(encryption_key)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
-    @iv_generator = iv_generator
-    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 32))
+    @iv = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 16))
+    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(16, 32))
   end
 
   def required_encryption_key_length
-    32
+    48
   end
 
   def streaming_decrypt(from_ciphertext_io:, into_plaintext_io: nil, &blk)
     cipher = OpenSSL::Cipher.new("aes-256-cfb")
     cipher.decrypt
-    cipher.iv = from_ciphertext_io.read(IV_LENGTH)
+    cipher.iv = @iv
     cipher.key = @key
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, destination_io: into_plaintext_io, &blk)
   end
 
   def streaming_encrypt(into_ciphertext_io:, from_plaintext_io: nil, &blk)
-    iv = @iv_generator.bytes(16)
     cipher = OpenSSL::Cipher.new("aes-256-cfb")
     cipher.encrypt
-    cipher.iv = iv
+    cipher.iv = @iv
     cipher.key = @key
-    into_ciphertext_io.write(iv)
     write_copy_stream_via_cipher(source_io: from_plaintext_io, cipher: cipher, destination_io: into_ciphertext_io, &blk)
   end
 
