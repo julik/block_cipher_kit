@@ -6,6 +6,7 @@ The following constructions are currently implemented:
 
 * AES-256-CBC (limited random read access, requires reading to end of source)
 * AES-256-CFB (limited random read access, requires reading to start offset)
+* AES-256-CFB-CIV - CIV for "concatenated IV", The IV is provided together with the encryption key (assumes unique key per message (limited random read access, requires reading to start offset) - 
 * AES-256-CTR (with random read access)
 * AES-256-GCM (with random read access via CTR, random read access does not validate)
 
@@ -78,7 +79,7 @@ To use streaming encryption, writing the plaintext the data as you go:
 ```
 File.open(plain_file_path + ".enc", "wb") do |into|
   scheme = BlockCipherKit::AES256CTRScheme.new(encryption_key)
-  scheme.streaming_encrypt(into_ciphertext_io: from) do |sink|
+  scheme.streaming_encrypt(into_ciphertext_io: into) do |sink|
     sink.write("This is some very secret data")
     sink.write("Very secret indeed")
   end
