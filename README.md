@@ -2,7 +2,7 @@
 
 Is a small shim on top of a few block ciphers. It is useful for encrypting and decrypting data stored in files, or accessible via IOs. The main addition from using "bare" ciphers is the addition of random access reads where it can be realised.
 
-The following comstructions are currently implemented:
+The following constructions are currently implemented:
 
 * AES-256-CBC (limited random read access, requires reading to end of source)
 * AES-256-CFB (limited random read access, requires reading to start offset)
