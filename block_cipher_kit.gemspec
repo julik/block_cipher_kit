@@ -20,10 +20,9 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  # Do not depend on openssl explicitly, that is important!
+  # Do not depend on openssl explicitly, we have a warning in the code for this
   # spec.add_dependency "openssl"
 
-  spec.add_development_dependency "bundler"
   spec.add_development_dependency "minitest"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "magic_frozen_string_literal"
@@ -31,5 +30,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "yard"
   # redcarpet is needed for the yard gem to enable Github Flavored Markdown
   spec.add_development_dependency "redcarpet"
-  spec.add_development_dependency "sord"
+
+  # Sord and sorbet-runtime are somewhat Ruby version dependent so wait with this
+  # until we have everything YARD-documented
+  # spec.add_development_dependency "sord"
 end
