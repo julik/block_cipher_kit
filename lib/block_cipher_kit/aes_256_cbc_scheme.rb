@@ -61,6 +61,8 @@ class BlockCipherKit::AES256CBCScheme < BlockCipherKit::BaseScheme
     lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_decrypt)
     lens = BlockCipherKit::IOLens.new(writable, lens_range)
 
+    # TODO: it seems that if we read only the blocks we touch, we need to call cipher.final to get all the output - the cipher buffers,
+    # but if we call .final without having read the entire ciphertext the cipher will barf. This needs to be fixed as it is certainly possible with CBC.
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, finalize_cipher: true, read_limit: from_ciphertext_io.size - ciphertext_starts_at)
   end
 end
