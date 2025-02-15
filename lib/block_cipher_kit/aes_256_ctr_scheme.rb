@@ -39,17 +39,19 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     n_blocks_to_skip, offset_into_first_block = range.begin.divmod(block_size)
 
     nonce_iv_and_ctr = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES + 4)
+    ciphertext_starts_at = from_ciphertext_io.pos
 
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.decrypt
     cipher.key = @key
-    cipher.iv = ctr_iv(nonce_iv_and_ctr, n_blocks_to_skip) # Set the IV for the first block we will be reading
+    cipher.iv = ctr_iv(nonce_iv_and_ctr, n_blocks_to_skip) # Set the counter for the first block we will be reading
 
     lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_read)
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
     lens = BlockCipherKit::IOLens.new(writable, lens_range)
-
+    
     # With CTR we do not need to read until the end of ciphertext as the cipher does not validate
+    from_ciphertext_io.seek(ciphertext_starts_at + (n_blocks_to_skip * block_size))
     n_blocks_to_read = (n_bytes_to_read.to_f / block_size).ceil + 1
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, read_limit: n_blocks_to_read * block_size)
   end
