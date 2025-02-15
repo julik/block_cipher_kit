@@ -1,26 +1,35 @@
 class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
-  def initialize(encryption_key)
+  IV_LENGTH = 12
+
+  def initialize(encryption_key, iv_generator: SecureRandom)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
-    @iv = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 12))
-    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(12, 32))
+    @iv_generator = iv_generator
+    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 32))
   end
 
   def required_encryption_key_length
-    44
+    32
   end
 
   def streaming_encrypt(into_ciphertext_io:, from_plaintext_io: nil, &blk)
+    iv = @iv_generator.bytes(IV_LENGTH)
+    into_ciphertext_io.write(iv)
+
     cipher = OpenSSL::Cipher.new("aes-256-gcm")
     cipher.encrypt
-    cipher.iv = @iv
+    cipher.iv = iv
     cipher.key = @key
     cipher.auth_data = ""
+
     write_copy_stream_via_cipher(source_io: from_plaintext_io, cipher: cipher, destination_io: into_ciphertext_io, &blk)
+
     tag = cipher.auth_tag
     into_ciphertext_io.write(tag)
   end
 
   def streaming_decrypt(from_ciphertext_io:, into_plaintext_io: nil, &blk)
+    # Read the IV
+    iv = from_ciphertext_io.read(IV_LENGTH)
     start_at = from_ciphertext_io.pos
 
     # Read the auth tag, which we store after the ciphertext. This is streaming
@@ -37,7 +46,7 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     # key=, #iv= and #auth_tag= first.
     cipher = OpenSSL::Cipher.new("aes-256-gcm")
     cipher.decrypt
-    cipher.iv = @iv
+    cipher.iv = iv
     cipher.key = @key
     cipher.auth_tag = auth_tag_from_io_tail
     cipher.auth_data = ""
@@ -65,24 +74,19 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     n_bytes_to_read = range.end - range.begin + 1
     n_blocks_to_read = ((offset_into_first_block + n_bytes_to_read) / block_and_tag_size.to_f).ceil
 
-    # If the from_io also contains some kind of header, we assume
-    # that the pointer has been moved to where ciphertext begins - i.e.
-    # using IO#seek. We need that pointer position so that we can
-    # seek to block offsets correctly - otherwise we need a wrapper
-    # which recomputes offsets in the IO
+    initial_iv_from_input = from_ciphertext_io.read(12)
     ciphertext_starts_at = from_ciphertext_io.pos
 
-    # Use the CTR cipher mode so that we can use counters easily, see
+    # This is not a typo: we use GCM for encrypting the entire file and for decrypting the entire file, but to
+    # have access to random blocks we need to downgrade to CTR, since we can't validate the tag anyway
+    # This is a widely known trick, see
     # https://stackoverflow.com/questions/49228671/aes-gcm-decryption-bypassing-authentication-in-java/49244840#49244840
     # What we are doing here is not very secure
     # because we lose the authencation of the cipher (this does not verify the tag). But we can't actually
-    # verify the tag without having decrypted the entire file (the entire message).
-    #
-    # So this is not a typo: we use GCM for encrypting the entire file and for decrypting the entire file, but to
-    # have access to random blocks we need to downgrade to CTR, since we can't validate the tag anyway
+    # verify the tag without having decrypted the entire message.
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.decrypt
-    cipher.iv = ctr_iv(n_blocks_to_skip) # Set the IV for the first block we will be reading
+    cipher.iv = ctr_iv(initial_iv_from_input, n_blocks_to_skip) # Set the IV for the first block we will be reading
     cipher.key = @key
 
     buf = StringIO.new.binmode
@@ -92,11 +96,12 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     buf.read(n_bytes_to_read) # return just the amount of bytes requested
   end
 
-  def ctr_iv(for_block_n)
+  def ctr_iv(initial_iv_from_input, for_block_n)
+    raise ArgumentError unless initial_iv_from_input.bytesize == 12
     # The counter gets incremented twice per block with GCM and the
     # initial counter value is 2 (as if there was a block before), see
     # https://stackoverflow.com/a/49244840
     ctr = (2 + (for_block_n * 2))
-    @iv.b + [ctr].pack("N")
+    initial_iv_from_input.b + [ctr].pack("N")
   end
 end

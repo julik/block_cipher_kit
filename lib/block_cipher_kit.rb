@@ -1,5 +1,21 @@
-require "openssl"
+begin
+  require "openssl"
+rescue LoadError
+  message = <<~ERR
+    
+    Unable to load "openssl". You may be running a version of Ruby where the "openssl"
+    library is not contained in the standard library, but must be installed as a gem.
+    
+    We do not specify "openssl" as a dependency of block_cipher_kit because gems spun off
+    from the standard library can cause problems if they are specified as transitive dependencies,
+    especially on older Ruby versions.
 
+    Running `bundle add openssl` in your application will likely resolve the issue.
+  ERR
+  raise LoadError, message
+end
+
+require "securerandom"
 module BlockCipherKit
   autoload :IOLens, __dir__ + "/block_cipher_kit/io_lens.rb"
   autoload :BlockWritable, __dir__ + "/block_cipher_kit/block_writable.rb"
