@@ -55,3 +55,4 @@ tmp
 # Rubocop report
 rubocop.html
 
+pkg/*.gem
