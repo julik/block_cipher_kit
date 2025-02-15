@@ -13,22 +13,22 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
   end
 
   def streaming_encrypt(into_ciphertext_io:, from_plaintext_io: nil, &blk)
-    nonce_iv_and_ctr = @iv_generator.bytes(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES + 4)
-    into_ciphertext_io.write(nonce_iv_and_ctr)
+    nonce_and_iv = @iv_generator.bytes(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
+    into_ciphertext_io.write(nonce_and_iv)
 
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.encrypt
-    cipher.iv = ctr_iv(nonce_iv_and_ctr, _for_block_n = 0)
+    cipher.iv = ctr_iv(nonce_and_iv, _for_block_n = 0)
     cipher.key = @key
     write_copy_stream_via_cipher(source_io: from_plaintext_io, cipher: cipher, destination_io: into_ciphertext_io, &blk)
   end
 
   def streaming_decrypt(from_ciphertext_io:, into_plaintext_io: nil, &blk)
-    nonce_iv_and_ctr = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES + 4)
+    nonce_and_iv = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
 
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.decrypt
-    cipher.iv = ctr_iv(nonce_iv_and_ctr, _for_block_n = 0)
+    cipher.iv = ctr_iv(nonce_and_iv, _for_block_n = 0)
     cipher.key = @key
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, destination_io: into_plaintext_io, &blk)
   end
@@ -38,25 +38,25 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     n_bytes_to_read = range.end - range.begin + 1
     n_blocks_to_skip, offset_into_first_block = range.begin.divmod(block_size)
 
-    nonce_iv_and_ctr = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES + 4)
+    nonce_and_iv = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
     ciphertext_starts_at = from_ciphertext_io.pos
 
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.decrypt
     cipher.key = @key
-    cipher.iv = ctr_iv(nonce_iv_and_ctr, n_blocks_to_skip) # Set the counter for the first block we will be reading
+    cipher.iv = ctr_iv(nonce_and_iv, n_blocks_to_skip) # Set the counter for the first block we will be reading
 
     lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_read)
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
     lens = BlockCipherKit::IOLens.new(writable, lens_range)
-    
+
     # With CTR we do not need to read until the end of ciphertext as the cipher does not validate
     from_ciphertext_io.seek(ciphertext_starts_at + (n_blocks_to_skip * block_size))
     n_blocks_to_read = (n_bytes_to_read.to_f / block_size).ceil + 1
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, read_limit: n_blocks_to_read * block_size)
   end
 
-  def ctr_iv(nonce_iv_and_ctr, for_block_n)
+  def ctr_iv(nonce_and_iv, for_block_n)
     # The IV is the counter block
     # see spec https://datatracker.ietf.org/doc/html/rfc3686#section-4
     # It consists of:
@@ -81,7 +81,7 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     # https://crypto.stackexchange.com/a/71196
     # But for the counter to overflow we would need our input to be more than 68719476720 bytes.
     # That is just short of 64 gigabytes (!). Maybe we need a backstop for that. Or maybe we don't.
-    raise ArgumentError unless nonce_iv_and_ctr.bytesize == 16
-    nonce_iv_and_ctr.byteslice(0, 12) + [for_block_n + 1].pack("N")
+    raise ArgumentError unless nonce_and_iv.bytesize == 12
+    nonce_and_iv.b + [for_block_n + 1].pack("N")
   end
 end

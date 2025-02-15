@@ -20,7 +20,7 @@ A scheme is a crypto **construction** - a particular way to use a particular blo
 The following rules are true for any given Scheme:
 
 * Ciphertext output for known plaintext, randomness source and encryption key of every scheme will come out exactly the same (a scheme encrypts deterministically).
-* Plaintext output for known ciphertext and encryption key of every scheme will come out exactly the same (a scheme decrypts deterministicalle).
+* Plaintext output for known ciphertext and encryption key of every scheme will come out exactly the same (a scheme decrypts deterministically).
 * The scheme's output will stay exactly the same throughout the versioning of the gem, provided the underlying cipher (OpenSSL or other) is available on the host system.
 
 ## Interop
@@ -31,7 +31,7 @@ Data written by the schemes is compatible with the "bare" uses of the ciphers, w
 * AES-256-CFB - Layout is `[ IV - 16 bytes) ][ Ciphertext in 16 byte blocks]`
 * AES-256-CTR - Layout is `[ nonce - 4 bytes][ IV - 8 bytes ][ Ciphertext in 16 byte blocks]`
 * AES-256-GCM - Layout is `[ nonce - 4 bytes][ IV - 8 bytes ][ Ciphertext in 16 byte blocks][ Validation tag - 16 bytes ]`
-* AES-256-CFB-CIV - Layout is `[ Ciphertext in 16 byte blocks ]`. The `encryption_key` must be `[ key - 32 bytes][ IV - 16 bytes]` (the IV is not stored with ciphertext)
+* AES-256-CFB-CIV - Layout is `[ Ciphertext in 16 byte blocks ]`. The `encryption_key` must be `[ IV - 16 bytes][ key - 32 bytes]` (IV is not stored with ciphertext)
 
 ## Which scheme to use?
 
