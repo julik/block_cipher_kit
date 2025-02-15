@@ -11,16 +11,28 @@ The following ciphers are currently implemented:
 
 Most likely ChaCha20 cam be added fairly easily.
 
+The gem provides a number of **schemes** which are known, mostly correct ways to use a particular block cipher. You can use those schemes to do block encryption and decryption.
+
+## What is a "scheme"?
+
+A scheme is a crypto **construction** - a particular way to use a particular block cipher. In this gem, the schemes are guaranteed not to change between releases. Once a scheme is part of the gem, you will be able to use that scheme to read data you have encrypted using that scheme. Most of the **schemes** provided by the gem are constructed from standard AES block ciphers, used in a standard, transparent manner.
+
+The following rules are true for any given Scheme:
+
+* Ciphertext output for known plaintext, randomness source and encryption key of every scheme will come out exactly the same (a scheme encrypts deterministically).
+* Plaintext output for known ciphertext and encryption key of every scheme will come out exactly the same (a scheme decrypts deterministicalle).
+* The scheme's output will stay exactly the same throughout the versioning of the gem, provided the underlying cipher (OpenSSL or other) is available on the host system.
+
 ## Interop
 
 Data written by the schemes is compatible with the "bare" uses of the ciphers, with a few notes:
 
-* AES-256-CBC - Same as "bare"
-* AES-256-CFB - Same as "bare"
-* AES-256-CTR - Same as "bare"
-* AES-256-GCM - "Bare", validation tag (16 bytes) is appended at the end of the output
+* AES-256-CBC - Layout is `[ IV - 16 bytes) ][ Ciphertext in 16 byte blocks]`
+* AES-256-CFB - Layout is `[ IV - 16 bytes) ][ Ciphertext in 16 byte blocks]`
+* AES-256-CTR - Layout is `[ nonce - 4 bytes][ IV - 8 bytes ][ Ciphertext in 16 byte blocks]`
+* AES-256-GCM - Layout is `[ nonce - 4 bytes][ IV - 8 bytes ][ Ciphertext in 16 byte blocks][ Validation tag - 16 bytes ]`
 
-## Which cipher to use?
+## Which scheme to use?
 
 Please do some research as the topic is vast. GCM is quite good, I found CBC to be good for files as well. Be aware that both GCM and CTR have a limit of about 64GB of ciphertext before the block counter rolls over.
 
