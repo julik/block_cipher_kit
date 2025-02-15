@@ -1,7 +1,7 @@
 require "tempfile"
 
 class BlockCipherKit::AES256CFBCIVScheme < BlockCipherKit::BaseScheme
-  def initialize(encryption_key)
+  def initialize(encryption_key, **)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
     @iv = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 16))
     @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(16, 32))

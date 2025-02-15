@@ -1,5 +1,5 @@
 class BlockCipherKit::PassthruScheme < BlockCipherKit::BaseScheme
-  def initialize(*)
+  def initialize(...)
   end
 
   def streaming_decrypt(from_ciphertext_io:, into_plaintext_io: nil, &blk)

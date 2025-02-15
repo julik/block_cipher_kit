@@ -1,9 +1,10 @@
 class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
   IV_LENGTH = 12
 
-  def initialize(encryption_key, iv_generator: SecureRandom)
+  def initialize(encryption_key, iv_generator: SecureRandom, auth_data: "")
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
     @iv_generator = iv_generator
+    @auth_data = BlockCipherKit::KeyMaterial.new(auth_data.b)
     @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 32))
   end
 
@@ -19,7 +20,7 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     cipher.encrypt
     cipher.iv = iv
     cipher.key = @key
-    cipher.auth_data = ""
+    cipher.auth_data = @auth_data
 
     write_copy_stream_via_cipher(source_io: from_plaintext_io, cipher: cipher, destination_io: into_ciphertext_io, &blk)
 
@@ -49,7 +50,7 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     cipher.iv = iv
     cipher.key = @key
     cipher.auth_tag = auth_tag_from_io_tail
-    cipher.auth_data = ""
+    cipher.auth_data = @auth_data
 
     from_ciphertext_io.seek(start_at)
 
