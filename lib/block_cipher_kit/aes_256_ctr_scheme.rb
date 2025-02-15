@@ -2,28 +2,33 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
   NONCE_LENGTH_BYTES = 4
   IV_LENGTH_BYTES = 8
 
-  def initialize(encryption_key)
+  def initialize(encryption_key, iv_generator: SecureRandom)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
-    @iv = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 12))
-    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(12, 32))
+    @iv_generator = iv_generator
+    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 32))
   end
 
   def required_encryption_key_length
-    44
+    32
   end
 
   def streaming_encrypt(into_ciphertext_io:, from_plaintext_io: nil, &blk)
+    nonce_and_iv = @iv_generator.bytes(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
+    into_ciphertext_io.write(nonce_and_iv)
+
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.encrypt
-    cipher.iv = ctr_iv(_for_block_n = 0)
+    cipher.iv = ctr_iv(nonce_and_iv, _for_block_n = 0)
     cipher.key = @key
     write_copy_stream_via_cipher(source_io: from_plaintext_io, cipher: cipher, destination_io: into_ciphertext_io, &blk)
   end
 
   def streaming_decrypt(from_ciphertext_io:, into_plaintext_io: nil, &blk)
+    nonce_and_iv = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
+
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.decrypt
-    cipher.iv = ctr_iv(_for_block_n = 0)
+    cipher.iv = ctr_iv(nonce_and_iv, _for_block_n = 0)
     cipher.key = @key
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, destination_io: into_plaintext_io, &blk)
   end
@@ -33,30 +38,23 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     n_bytes_to_read = range.end - range.begin + 1
     n_blocks_to_skip, offset_into_first_block = range.begin.divmod(block_size)
 
-    # If the from_io also contains some kind of header, we assume
-    # that the pointer has been moved to where ciphertext begins - i.e.
-    # using IO#seek. We need that pointer position so that we can
-    # seek to block offsets correctly - otherwise we need a wrapper
-    # which recomputes offsets in the IO
-    ciphertext_starts_at = from_ciphertext_io.pos
+    nonce_and_iv = from_ciphertext_io.read(NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
 
     cipher = OpenSSL::Cipher.new("aes-256-ctr")
     cipher.decrypt
     cipher.key = @key
-    cipher.iv = ctr_iv(n_blocks_to_skip) # Set the IV for the first block we will be reading
-
-    # We need to read the blocks until the IO runs out, and we need to start reading at a block boundary
-    from_ciphertext_io.seek(ciphertext_starts_at + (block_size * n_blocks_to_skip))
+    cipher.iv = ctr_iv(nonce_and_iv, n_blocks_to_skip) # Set the IV for the first block we will be reading
 
     lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_read)
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
     lens = BlockCipherKit::IOLens.new(writable, lens_range)
 
+    # With CTR we do not need to read until the end of ciphertext as the cipher does not validate
     n_blocks_to_read = (n_bytes_to_read.to_f / block_size).ceil + 1
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, read_limit: n_blocks_to_read * block_size)
   end
 
-  def ctr_iv(for_block_n)
+  def ctr_iv(nonce_and_iv, for_block_n)
     # The IV is the counter block
     # see spec https://datatracker.ietf.org/doc/html/rfc3686#section-4
     # It consists of:
@@ -81,7 +79,8 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     # https://crypto.stackexchange.com/a/71196
     # But for the counter to overflow we would need our input to be more than 68719476720 bytes.
     # That is just short of 64 gigabytes (!). Maybe we need a backstop for that. Or maybe we don't.
-    ctr = for_block_n % 0xFFFFFFFF
-    @iv.byteslice(0, NONCE_LENGTH_BYTES + IV_LENGTH_BYTES) + [ctr].pack("N")
+    counter = for_block_n % 0xFFFFFFFF
+    raise ArgumentError, "nonce_and_iv must be #{NONCE_LENGTH_BYTES + IV_LENGTH_BYTES} bytes" unless nonce_and_iv.bytesize == (NONCE_LENGTH_BYTES + IV_LENGTH_BYTES)
+    nonce_and_iv.b + [counter].pack("N")
   end
 end

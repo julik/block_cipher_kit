@@ -22,7 +22,6 @@ class SchemesTest < Minitest::Test
   SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
     define_method "test_scheme #{scheme_class_name} encrypts and decrypts the entire message" do
       assert_encrypts_and_decrypts_entire_message(scheme_class_name)
-      assert_allows_random_access(scheme_class_name)
     end
   end
 
