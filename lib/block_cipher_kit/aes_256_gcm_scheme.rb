@@ -1,6 +1,9 @@
 class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
   IV_LENGTH = 12
 
+  # @param encryption_key[String] a String in binary encoding containing the key for the cipher
+  # @param iv_generator[Random,SecureRandom] RNG that can output bytes. A deterministic substitute can be used for testing.
+  # @param auth_data[String] optional auth data for the cipher. If provided, this auth data will be used to write ciphertext and to validate.
   def initialize(encryption_key, iv_generator: SecureRandom, auth_data: "")
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
     @iv_generator = iv_generator
@@ -63,7 +66,11 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, read_limit: n_bytes_to_read_excluding_auth_tag, destination_io: into_plaintext_io, &blk)
   end
 
-  def decrypt_range(from_ciphertext_io:, range:)
+  # Range decryption with GCM is performed by downgrading the GCM cipher to a CTR cipher, validation
+  # gets skipped.
+  #
+  # @see BaseScheme#streaming_decrypt_range
+  def streaming_decrypt_range(from_ciphertext_io:, range:, into_plaintext_io: nil, &blk)
     # GCM uses 16 byte blocks, but it writes the block
     # and the tag of 16 bytes. So actual block boundaries
     # are at 2x AES block size of 16 bytes. This is also
@@ -90,12 +97,15 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
     cipher.iv = ctr_iv(initial_iv_from_input, n_blocks_to_skip) # Set the IV for the first block we will be reading
     cipher.key = @key
 
-    buf = StringIO.new.binmode
+    lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_read)
+    writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
+    lens = BlockCipherKit::IOLens.new(writable, lens_range)
+
     from_ciphertext_io.seek(ciphertext_starts_at + (n_blocks_to_skip * block_and_tag_size))
-    read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, read_limit: n_blocks_to_read * block_and_tag_size, destination_io: buf)
-    buf.seek(offset_into_first_block) # Discard the bytes beyound the offset
-    buf.read(n_bytes_to_read) # return just the amount of bytes requested
+    read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, read_limit: n_blocks_to_read * block_and_tag_size, destination_io: lens)
   end
+
+  private
 
   def ctr_iv(initial_iv_from_input, for_block_n)
     raise ArgumentError unless initial_iv_from_input.bytesize == 12

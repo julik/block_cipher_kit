@@ -2,6 +2,8 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
   NONCE_LENGTH_BYTES = 4
   IV_LENGTH_BYTES = 8
 
+  # @param encryption_key[String] a String in binary encoding containing the key for the cipher
+  # @param iv_generator[Random,SecureRandom] RNG that can output bytes. A deterministic substitute can be used for testing.
   def initialize(encryption_key, iv_generator: SecureRandom)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
     @iv_generator = iv_generator
@@ -55,6 +57,8 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     n_blocks_to_read = (n_bytes_to_read.to_f / block_size).ceil + 1
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, read_limit: n_blocks_to_read * block_size)
   end
+
+  private
 
   def ctr_iv(nonce_and_iv, for_block_n)
     # The IV is the counter block

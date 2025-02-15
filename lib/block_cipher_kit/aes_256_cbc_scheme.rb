@@ -3,6 +3,8 @@ require "securerandom"
 class BlockCipherKit::AES256CBCScheme < BlockCipherKit::BaseScheme
   IV_LENGTH = 16
 
+  # @param encryption_key[String] a String in binary encoding containing the key for the cipher
+  # @param iv_generator[Random,SecureRandom] RNG that can output bytes. A deterministic substitute can be used for testing.
   def initialize(encryption_key, iv_generator: SecureRandom)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
     @iv_generator = iv_generator

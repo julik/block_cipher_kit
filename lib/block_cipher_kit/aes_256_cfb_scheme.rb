@@ -30,6 +30,8 @@ class BlockCipherKit::AES256CFBScheme < BlockCipherKit::BaseScheme
   end
 
   def streaming_decrypt_range(from_ciphertext_io:, range:, into_plaintext_io: nil, &blk)
+    # There is potential, but I don't have time for this at the moment
+    # https://crypto.stackexchange.com/a/87007
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
     lens = BlockCipherKit::IOLens.new(writable, range)
     streaming_decrypt(from_ciphertext_io: from_ciphertext_io, into_plaintext_io: lens)

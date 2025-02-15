@@ -15,4 +15,12 @@ task :format do
   `bundle exec magic_frozen_string_literal .`
 end
 
-task default: [:test, :standard]
+task :generate_typedefs do
+  `bundle exec sord rbi/block_cipher_kit.rbi`
+end
+
+# When building the gem, generate typedefs beforehand,
+# so that they get included
+Rake::Task["build"].enhance(["generate_typedefs"])
+
+task default: [:test, :standard, :generate_typedefs]

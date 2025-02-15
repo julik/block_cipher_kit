@@ -27,7 +27,9 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "standard", "1.28.5" # Needed for 2.6
-  spec.add_development_dependency "yard"
+
+  spec.add_development_dependency "yard", "~> 0.9"
+  spec.add_development_dependency "sord"
   # redcarpet is needed for the yard gem to enable Github Flavored Markdown
   spec.add_development_dependency "redcarpet"
 
