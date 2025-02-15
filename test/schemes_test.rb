@@ -13,10 +13,22 @@ class SchemesTest < Minitest::Test
   SCHEME_NAMES_INCLUDING_PASSTHRU = SCHEME_NAMES + ["BlockCipherKit::PassthruScheme"]
 
   SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
-    define_method "test_scheme #{scheme_class_name} encrypts and decrypts correctly, including random access" do
+    define_method "test_scheme #{scheme_class_name} encrypts and decrypts using both block and IO for input and output" do
       assert_encrypts_from_block_and_io(scheme_class_name)
       assert_decrypts_into_block_and_io(scheme_class_name)
-      assert_correct_readback(scheme_class_name)
+    end
+  end
+
+  SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
+    define_method "test_scheme #{scheme_class_name} encrypts and decrypts the entire message" do
+      assert_encrypts_and_decrypts_entire_message(scheme_class_name)
+      assert_allows_random_access(scheme_class_name)
+    end
+  end
+
+  SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
+    define_method "test_scheme #{scheme_class_name} allows random access reads" do
+      assert_allows_random_access(scheme_class_name)
     end
   end
 
@@ -129,7 +141,33 @@ class SchemesTest < Minitest::Test
     assert_equal readback.string[-4..], plaintext[-4..]
   end
 
-  def assert_correct_readback(scheme_class_name)
+  def assert_encrypts_and_decrypts_entire_message(scheme_class_name)
+    rng = Random.new(Minitest.seed)
+    random_encryption_key = rng.bytes(64)
+
+    enc = resolve(scheme_class_name).new(random_encryption_key)
+
+    # Generate a prime number of bytes, so that the plaintext does not
+    # subdivide into blocks. This will allow us to find situations where
+    # block offsets are not used for reading. A 24-bit prime we get is
+    # 14896667, which is just over 14 megabytes
+    amount_of_plain_bytes = OpenSSL::BN.generate_prime(24).to_i
+    plain_bytes = rng.bytes(amount_of_plain_bytes)
+
+    source_io = StringIO.new(plain_bytes)
+    enc_io = StringIO.new.binmode
+    enc_io.write("HDR") # emulate a header
+    enc.streaming_encrypt(from_plaintext_io: source_io, into_ciphertext_io: enc_io)
+
+    enc_io.seek(3) # Move to the offset where ciphertext starts
+
+    decrypted_io = StringIO.new.binmode
+    enc.streaming_decrypt(from_ciphertext_io: enc_io, into_plaintext_io: decrypted_io)
+    assert_equal decrypted_io.size, source_io.size, "#{scheme_class_name} should have decrypted the entire message"
+    assert_equal plain_bytes, decrypted_io.string, "#{scheme_class_name} Bytes mismatch when decrypting the entire message"
+  end
+
+  def assert_allows_random_access(scheme_class_name)
     rng = Random.new(Minitest.seed)
     random_encryption_key = rng.bytes(64)
 
@@ -174,12 +212,6 @@ class SchemesTest < Minitest::Test
       assert_equal expected.bytesize, got.bytesize, "#{scheme_class_name} Range #{range} should have decrypted #{expected.bytesize} bytes but decrypted #{got.bytesize}"
       assert_equal expected, got, "#{scheme_class_name} Range #{range} bytes mismatch (#{expected[0..16].inspect} expected but #{got[0..16].inspect} decrypted"
     end
-
-    enc_io.seek(3) # Emulate the header already did get read
-    decrypted_io = StringIO.new.binmode
-    enc.streaming_decrypt(from_ciphertext_io: enc_io, into_plaintext_io: decrypted_io)
-    assert_equal decrypted_io.size, source_io.size, "#{scheme_class_name} should have decrypted the entire message"
-    assert_equal plain_bytes, decrypted_io.string, "#{scheme_class_name} Bytes mismatch when decrypting the entire message"
   end
 
   def resolve(module_name)
