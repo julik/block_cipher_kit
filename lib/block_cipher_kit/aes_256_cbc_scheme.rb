@@ -38,6 +38,10 @@ class BlockCipherKit::AES256CBCScheme < BlockCipherKit::BaseScheme
     n_bytes_to_decrypt = range.end - range.begin + 1
     n_blocks_to_skip, offset_into_first_block = range.begin.divmod(block_size)
 
+    # We need to read ahead to know well whether to call "final" on the cipher
+    n_blocks_to_read = (n_bytes_to_decrypt.to_f / block_size).ceil + 2
+    n_bytes_to_read = (n_blocks_to_read * block_size)
+
     cipher = OpenSSL::Cipher.new("aes-256-cbc")
     cipher.decrypt
     cipher.key = @key
@@ -50,8 +54,11 @@ class BlockCipherKit::AES256CBCScheme < BlockCipherKit::BaseScheme
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
     lens = BlockCipherKit::WriteWindowIO.new(writable, offset_into_first_block, n_bytes_to_decrypt)
 
-    # TODO: it seems that if we read only the blocks we touch, we need to call cipher.final to get all the output - the cipher buffers,
-    # but if we call .final without having read the entire ciphertext the cipher will barf. This needs to be fixed as it is certainly possible with CBC.
-    read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, finalize_cipher: true, read_limit: from_ciphertext_io.size - from_ciphertext_io.pos)
+    # We need to know whether we are going to be finishing our read with a block that may be shorter than
+    # block_size. In that case we must call `.final` on the cipher so that it releases us the decrypted
+    # plaintext instead of waiting for the remainder of the bits the last block consists of
+    bytes_remaining = from_ciphertext_io.size - from_ciphertext_io.pos
+    do_finalize = bytes_remaining < n_bytes_to_read
+    read_copy_stream_via_cipher(source_io: from_ciphertext_io, destination_io: lens, cipher: cipher, finalize_cipher: do_finalize, read_limit: n_bytes_to_read)
   end
 end
