@@ -1,3 +1,4 @@
+# :nodoc:
 # An adapter which allows a block that accepts chunks of
 # written data to be used as an IO and passed to IO.copy_stream
 class BlockCipherKit::BlockWritable

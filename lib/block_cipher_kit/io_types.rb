@@ -1,20 +1,22 @@
-# Used as a stand-in for any IO-ish that responds to #read
+# Used as a stand-in for any IO-ish that responds to #read. This module is defined for YARD docs
+# so that Sorbet has a proper type definition.
 module StraightReadableIO
-  # @param [Integer] how many bytes to read from the IO
+  # @param n[Integer] how many bytes to read from the IO
   # @return [String,nil] a String in binary encoding or nil
   def read(n)
   end
 end
 
 # Used as a stand-in for any IO-ish that responds to `#read`, `#seek`, `#pos` and `#size`
+# This module is defined for YARD docs so that Sorbet has a proper type definition.
 module RandomReadIO
-  # @param [Integer] how many bytes to read from the IO
+  # @param n[Integer] how many bytes to read from the IO
   # @return [String,nil] a String in binary encoding or nil
   def read(n)
   end
 
-  # @param [Integer] the absolute offset in the IO to seek to
-  # @return 0
+  # @param to_absolute_offset[Integer] the absolute offset in the IO to seek to
+  # @return [0]
   def seek(to_absolute_offset)
   end
 
@@ -27,9 +29,11 @@ module RandomReadIO
   end
 end
 
+# Used as a stand-in for any IO that responds to `#write`
+# This module is defined for YARD docs so that Sorbet has a proper type definition.
 module WritableIO
-  # @param [String] the bytes to write into the IO
+  # @param string[String] the bytes to write into the IO
   # @return [Integer] the amount of bytes consumed. Will usually be `bytes.bytesize`
-  def write(n)
+  def write(string)
   end
 end

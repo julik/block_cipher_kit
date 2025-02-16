@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # Allows you to pass through the writes of a particular byte range only, discarding the rest
+# :nodoc:
 class BlockCipherKit::IOLens
   def initialize(io, range)
     @io = io
