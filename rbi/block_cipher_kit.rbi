@@ -2,28 +2,9 @@
 module BlockCipherKit
   VERSION = T.let("0.0.1", T.untyped)
 
-  # Allows you to pass through the writes of a particular byte range only, discarding the rest
-  class IOLens
-    # sord omit - no YARD type given for "io", using untyped
-    # sord omit - no YARD type given for "range", using untyped
-    sig { params(io: T.untyped, range: T.untyped).void }
-    def initialize(io, range); end
-
-    # sord omit - no YARD type given for "bytes", using untyped
-    # sord omit - no YARD return type given, using untyped
-    sig { params(bytes: T.untyped).returns(T.untyped) }
-    def write(bytes); end
-
-    # sord omit - no YARD type given for "range_a", using untyped
-    # sord omit - no YARD type given for "range_b", using untyped
-    # sord omit - no YARD return type given, using untyped
-    # lifted from https://github.com/julik/range_utils/blob/master/lib/range_utils.rb
-    sig { params(range_a: T.untyped, range_b: T.untyped).returns(T.untyped) }
-    def intersection_of(range_a, range_b); end
-  end
-
   # Allows an OpenSSL::Cipher to be written through as if it were an IO. This
   # allows the cipher to be passed to things like IO.copy_stream
+  # :nodoc:
   class CipherIO
     # sord omit - no YARD type given for "io", using untyped
     # sord omit - no YARD type given for "cipher", using untyped
@@ -131,6 +112,7 @@ module BlockCipherKit
 
   # Allows a string with key material (like IV and key)
   # to be concealed when an object holding it gets printed or show via #inspect
+  # :nodoc:
   class KeyMaterial
     extend Forwardable
 
@@ -143,6 +125,7 @@ module BlockCipherKit
     def inspect; end
   end
 
+  # :nodoc:
   # An adapter which allows a block that accepts chunks of
   # written data to be used as an IO and passed to IO.copy_stream
   class BlockWritable
@@ -158,6 +141,33 @@ module BlockCipherKit
     # sord omit - no YARD return type given, using untyped
     sig { params(string: T.untyped).returns(T.untyped) }
     def write(string); end
+  end
+
+  class ReadWindowIO
+    # sord omit - no YARD type given for "io", using untyped
+    # sord omit - no YARD type given for "starting_at_offset", using untyped
+    # sord omit - no YARD type given for "window_size", using untyped
+    sig { params(io: T.untyped, starting_at_offset: T.untyped, window_size: T.untyped).void }
+    def initialize(io, starting_at_offset, window_size); end
+
+    # sord omit - no YARD return type given, using untyped
+    sig { returns(T.untyped) }
+    def size; end
+
+    # sord omit - no YARD type given for "n_bytes", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(n_bytes: T.untyped).returns(T.untyped) }
+    def read(n_bytes); end
+
+    # sord omit - no YARD type given for "to_offset_in_window", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(to_offset_in_window: T.untyped).returns(T.untyped) }
+    def seek(to_offset_in_window); end
+
+    # sord omit - no YARD type given for :pos, using untyped
+    # Returns the value of attribute pos.
+    sig { returns(T.untyped) }
+    attr_reader :pos
   end
 
   class PassthruScheme < BlockCipherKit::BaseScheme
@@ -181,14 +191,35 @@ module BlockCipherKit
     def streaming_decrypt_range(from_ciphertext_io:, range:, into_plaintext_io: nil, &blk); end
   end
 
+  # Allows you to pass through the writes of a particular byte range only, discarding the rest
+  # :nodoc:
+  class WriteWindowIO
+    # sord omit - no YARD type given for "io", using untyped
+    # sord omit - no YARD type given for "range", using untyped
+    sig { params(io: T.untyped, range: T.untyped).void }
+    def initialize(io, range); end
+
+    # sord omit - no YARD type given for "bytes", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(bytes: T.untyped).returns(T.untyped) }
+    def write(bytes); end
+
+    # sord omit - no YARD type given for "range_a", using untyped
+    # sord omit - no YARD type given for "range_b", using untyped
+    # sord omit - no YARD return type given, using untyped
+    # lifted from https://github.com/julik/range_utils/blob/master/lib/range_utils.rb
+    sig { params(range_a: T.untyped, range_b: T.untyped).returns(T.untyped) }
+    def intersection_of(range_a, range_b); end
+  end
+
   class AES256CBCScheme < BlockCipherKit::BaseScheme
     IV_LENGTH = T.let(16, T.untyped)
 
-    # sord duck - #bytes looks like a duck type, replacing with untyped
+    # sord warn - SecureRandom wasn't able to be resolved to a constant in this project
     # _@param_ `encryption_key` — a String in binary encoding containing the key for the cipher
     # 
     # _@param_ `iv_generator` — RNG that can output bytes. A deterministic substitute can be used for testing.
-    sig { params(encryption_key: String, iv_generator: T.untyped).void }
+    sig { params(encryption_key: String, iv_generator: T.any(Random, SecureRandom)).void }
     def initialize(encryption_key, iv_generator: SecureRandom); end
 
     # sord omit - no YARD return type given, using untyped
@@ -245,11 +276,11 @@ module BlockCipherKit
     NONCE_LENGTH_BYTES = T.let(4, T.untyped)
     IV_LENGTH_BYTES = T.let(8, T.untyped)
 
-    # sord duck - #bytes looks like a duck type, replacing with untyped
+    # sord warn - SecureRandom wasn't able to be resolved to a constant in this project
     # _@param_ `encryption_key` — a String in binary encoding containing the key for the cipher
     # 
     # _@param_ `iv_generator` — RNG that can output bytes. A deterministic substitute can be used for testing.
-    sig { params(encryption_key: String, iv_generator: T.untyped).void }
+    sig { params(encryption_key: String, iv_generator: T.any(Random, SecureRandom)).void }
     def initialize(encryption_key, iv_generator: SecureRandom); end
 
     # sord omit - no YARD return type given, using untyped
@@ -282,13 +313,13 @@ module BlockCipherKit
   class AES256GCMScheme < BlockCipherKit::BaseScheme
     IV_LENGTH = T.let(12, T.untyped)
 
-    # sord duck - #bytes looks like a duck type, replacing with untyped
+    # sord warn - SecureRandom wasn't able to be resolved to a constant in this project
     # _@param_ `encryption_key` — a String in binary encoding containing the key for the cipher
     # 
     # _@param_ `iv_generator` — RNG that can output bytes. A deterministic substitute can be used for testing.
     # 
     # _@param_ `auth_data` — optional auth data for the cipher. If provided, this auth data will be used to write ciphertext and to validate.
-    sig { params(encryption_key: String, iv_generator: T.untyped, auth_data: String).void }
+    sig { params(encryption_key: String, iv_generator: T.any(Random, SecureRandom), auth_data: String).void }
     def initialize(encryption_key, iv_generator: SecureRandom, auth_data: ""); end
 
     # sord omit - no YARD return type given, using untyped
@@ -349,10 +380,10 @@ module BlockCipherKit
   end
 end
 
-# Used as a stand-in for any IO-ish that responds to #read
+# Used as a stand-in for any IO-ish that responds to #read. This module is defined for YARD docs
+# so that Sorbet has a proper type definition.
 module StraightReadableIO
-  # sord infer - argument name in single @param inferred as "n"
-  # _@param_ `how` — many bytes to read from the IO
+  # _@param_ `n` — how many bytes to read from the IO
   # 
   # _@return_ — a String in binary encoding or nil
   sig { params(n: Integer).returns(T.nilable(String)) }
@@ -360,19 +391,16 @@ module StraightReadableIO
 end
 
 # Used as a stand-in for any IO-ish that responds to `#read`, `#seek`, `#pos` and `#size`
+# This module is defined for YARD docs so that Sorbet has a proper type definition.
 module RandomReadIO
-  # sord infer - argument name in single @param inferred as "n"
-  # _@param_ `how` — many bytes to read from the IO
+  # _@param_ `n` — how many bytes to read from the IO
   # 
   # _@return_ — a String in binary encoding or nil
   sig { params(n: Integer).returns(T.nilable(String)) }
   def read(n); end
 
-  # sord infer - argument name in single @param inferred as "to_absolute_offset"
-  # _@param_ `the` — absolute offset in the IO to seek to
-  # 
-  # _@return_ — 0
-  sig { params(to_absolute_offset: Integer).returns(T.untyped) }
+  # _@param_ `to_absolute_offset` — the absolute offset in the IO to seek to
+  sig { params(to_absolute_offset: Integer).returns(Integer) }
   def seek(to_absolute_offset); end
 
   # _@return_ — current position in the IO
@@ -384,11 +412,12 @@ module RandomReadIO
   def size; end
 end
 
+# Used as a stand-in for any IO that responds to `#write`
+# This module is defined for YARD docs so that Sorbet has a proper type definition.
 module WritableIO
-  # sord infer - argument name in single @param inferred as "n"
-  # _@param_ `the` — bytes to write into the IO
+  # _@param_ `string` — the bytes to write into the IO
   # 
   # _@return_ — the amount of bytes consumed. Will usually be `bytes.bytesize`
-  sig { params(n: String).returns(Integer) }
-  def write(n); end
+  sig { params(string: String).returns(Integer) }
+  def write(string); end
 end

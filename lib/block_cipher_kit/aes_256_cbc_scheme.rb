@@ -49,7 +49,7 @@ class BlockCipherKit::AES256CBCScheme < BlockCipherKit::BaseScheme
 
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
     lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_decrypt)
-    lens = BlockCipherKit::IOLens.new(writable, lens_range)
+    lens = BlockCipherKit::WriteWindowIO.new(writable, lens_range)
 
     # TODO: it seems that if we read only the blocks we touch, we need to call cipher.final to get all the output - the cipher buffers,
     # but if we call .final without having read the entire ciphertext the cipher will barf. This needs to be fixed as it is certainly possible with CBC.

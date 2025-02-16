@@ -17,13 +17,13 @@ end
 
 require "securerandom"
 module BlockCipherKit
-  autoload :IOLens, __dir__ + "/block_cipher_kit/io_lens.rb"
+  autoload :WriteWindowIO, __dir__ + "/block_cipher_kit/write_window_io.rb"
   autoload :ReadWindowIO, __dir__ + "/block_cipher_kit/read_window_io.rb"
   autoload :BlockWritable, __dir__ + "/block_cipher_kit/block_writable.rb"
   autoload :CipherIO, __dir__ + "/block_cipher_kit/cipher_io.rb"
   autoload :KeyMaterial, __dir__ + "/block_cipher_kit/key_material.rb"
 
-  # private_constant :IOLens
+  # private_constant :WriteWindowIO
   # private_constant :ReadWindowIO
   # private_constant :BlockWritable
   # private_constant :CipherIO

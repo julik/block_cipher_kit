@@ -2,7 +2,7 @@
 
 require_relative "test_helper"
 
-class IOLensTest < Minitest::Test
+class WriteWindowIOTest < Minitest::Test
   def test_lens_writes
     input = Random.bytes(48)
     (1..input.bytesize).each do |write_size|
@@ -18,7 +18,7 @@ class IOLensTest < Minitest::Test
       ranges.each do |test_range|
         test_io = StringIO.new.binmode
         readable = StringIO.new(input).binmode
-        lens = BlockCipherKit::IOLens.new(test_io, test_range)
+        lens = BlockCipherKit::WriteWindowIO.new(test_io, test_range)
         while (chunk = readable.read(write_size))
           lens.write(chunk)
         end

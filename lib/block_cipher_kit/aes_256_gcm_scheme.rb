@@ -99,7 +99,7 @@ class BlockCipherKit::AES256GCMScheme < BlockCipherKit::BaseScheme
 
     lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_read)
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
-    lens = BlockCipherKit::IOLens.new(writable, lens_range)
+    lens = BlockCipherKit::WriteWindowIO.new(writable, lens_range)
 
     from_ciphertext_io.seek(ciphertext_starts_at + (n_blocks_to_skip * block_and_tag_size))
     read_copy_stream_via_cipher(source_io: from_ciphertext_io, cipher: cipher, read_limit: n_blocks_to_read * block_and_tag_size, destination_io: lens)
