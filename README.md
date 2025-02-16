@@ -2,17 +2,16 @@
 
 Is a small shim on top of a few block ciphers. It is useful for encrypting and decrypting data stored in files, or accessible via IOs. The main addition from using "bare" ciphers is the addition of random access reads where it can be realised.
 
-The following constructions are currently implemented:
+The gem provides a number of **schemes** which are known, mostly correct ways to use a particular block cipher. You can use those schemes to do block encryption and decryption.
+The following schemes are currently implemented:
 
-* AES-256-CBC (limited random read access, requires reading to end of source)
+* AES-256-CBC (random read access with overhead of 3 blocks)
 * AES-256-CFB (limited random read access, requires reading to start offset)
 * AES-256-CFB-CIV - CIV for "concatenated IV", The IV is provided together with the encryption key (assumes unique key per message (limited random read access, requires reading to start offset) - 
-* AES-256-CTR (with random read access)
-* AES-256-GCM (with random read access via CTR, random read access does not validate)
+* AES-256-CTR (random read access)
+* AES-256-GCM (random read access via CTR, random read access does not validate)
 
 Most likely ChaCha20 cam be added fairly easily.
-
-The gem provides a number of **schemes** which are known, mostly correct ways to use a particular block cipher. You can use those schemes to do block encryption and decryption.
 
 ## What is a "scheme"?
 
