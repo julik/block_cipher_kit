@@ -3,9 +3,9 @@
 # Allows you to pass through the writes of a particular byte range only, discarding the rest
 # :nodoc:
 class BlockCipherKit::WriteWindowIO
-  def initialize(io, range)
+  def initialize(io, offset, size)
+    @range = Range.new(offset, offset + size - 1)
     @io = io
-    @range = range
     @pos = 0
   end
 

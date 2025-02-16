@@ -48,9 +48,8 @@ class BlockCipherKit::AES256CTRScheme < BlockCipherKit::BaseScheme
     cipher.key = @key
     cipher.iv = ctr_iv(nonce_and_iv, n_blocks_to_skip) # Set the counter for the first block we will be reading
 
-    lens_range = offset_into_first_block...(offset_into_first_block + n_bytes_to_read)
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
-    lens = BlockCipherKit::WriteWindowIO.new(writable, lens_range)
+    lens = BlockCipherKit::WriteWindowIO.new(writable, offset_into_first_block, n_bytes_to_read)
 
     # With CTR we do not need to read until the end of ciphertext as the cipher does not validate
     from_ciphertext_io.seek(ciphertext_starts_at + (n_blocks_to_skip * block_size))

@@ -195,9 +195,10 @@ module BlockCipherKit
   # :nodoc:
   class WriteWindowIO
     # sord omit - no YARD type given for "io", using untyped
-    # sord omit - no YARD type given for "range", using untyped
-    sig { params(io: T.untyped, range: T.untyped).void }
-    def initialize(io, range); end
+    # sord omit - no YARD type given for "offset", using untyped
+    # sord omit - no YARD type given for "size", using untyped
+    sig { params(io: T.untyped, offset: T.untyped, size: T.untyped).void }
+    def initialize(io, offset, size); end
 
     # sord omit - no YARD type given for "bytes", using untyped
     # sord omit - no YARD return type given, using untyped

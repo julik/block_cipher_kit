@@ -33,7 +33,7 @@ class BlockCipherKit::AES256CFBScheme < BlockCipherKit::BaseScheme
     # There is potential, but I don't have time for this at the moment
     # https://crypto.stackexchange.com/a/87007
     writable = BlockCipherKit::BlockWritable.new(into_plaintext_io, &blk)
-    lens = BlockCipherKit::WriteWindowIO.new(writable, range)
+    lens = BlockCipherKit::WriteWindowIO.new(writable, range.begin, range.end - range.begin + 1)
     streaming_decrypt(from_ciphertext_io: from_ciphertext_io, into_plaintext_io: lens)
   end
 end
