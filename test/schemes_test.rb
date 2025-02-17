@@ -26,6 +26,12 @@ class SchemesTest < Minitest::Test
   end
 
   SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
+    define_method "test_scheme #{scheme_class_name} encrypts and decrypts an empty message" do
+      assert_encrypts_and_decrypts_empty_message(scheme_class_name)
+    end
+  end
+
+  SCHEME_NAMES_INCLUDING_PASSTHRU.each do |scheme_class_name|
     define_method "test_scheme #{scheme_class_name} allows random access reads" do
       assert_allows_random_access(scheme_class_name)
     end
@@ -71,6 +77,20 @@ class SchemesTest < Minitest::Test
     end
 
     assert_equal ciphertexts.length, ciphertexts.uniq.length
+  end
+
+  def assert_encrypts_and_decrypts_empty_message(scheme_class_name)
+    rng = Random.new(Minitest.seed)
+    key = rng.bytes(48)
+
+    scheme = resolve(scheme_class_name).new(key)
+    ciphered_io = StringIO.new
+    scheme.streaming_encrypt(from_plaintext_io: StringIO.new, into_ciphertext_io: ciphered_io)
+
+    ciphered_io.rewind
+    decrypted = StringIO.new
+    scheme.streaming_decrypt(from_ciphertext_io: ciphered_io, into_plaintext_io: decrypted)
+    assert_equal 0, decrypted.size
   end
 
   def assert_encrypts_from_block_and_io(scheme_class_name)
