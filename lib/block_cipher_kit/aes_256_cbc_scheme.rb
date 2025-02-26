@@ -8,7 +8,7 @@ class BlockCipherKit::AES256CBCScheme < BlockCipherKit::BaseScheme
   def initialize(encryption_key, iv_generator: SecureRandom)
     raise ArgumentError, "#{required_encryption_key_length} bytes of key material needed, at the minimum" unless encryption_key.bytesize >= required_encryption_key_length
     @iv_generator = iv_generator
-    @key = BlockCipherKit::KeyMaterial.new(encryption_key.byteslice(0, 32))
+    @key = encryption_key.byteslice(0, 32)
   end
 
   def required_encryption_key_length

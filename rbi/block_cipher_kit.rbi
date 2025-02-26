@@ -75,6 +75,17 @@ module BlockCipherKit
     sig { params(from_ciphertext_io: RandomReadIO, range: T::Range[T.untyped]).returns(String) }
     def decrypt_range(from_ciphertext_io:, range:); end
 
+    # sord omit - no YARD return type given, using untyped
+    sig { returns(T.untyped) }
+    def inspect; end
+
+    # sord omit - no YARD return type given, using untyped
+    # The names of instance variables which contain key material and need to be masked in the
+    # output of BaseScheme#inspect. This prevents us from leaking the key, while allowing each
+    # subclass to define which ivars it considers sensitive.
+    sig { returns(T.untyped) }
+    def key_material_instance_variable_names; end
+
     # sord omit - no YARD type given for "source_io:", using untyped
     # sord omit - no YARD type given for "cipher:", using untyped
     # sord omit - no YARD type given for "read_limit:", using untyped
@@ -108,21 +119,6 @@ module BlockCipherKit
       ).returns(T.untyped)
     end
     def write_copy_stream_via_cipher(cipher:, destination_io:, source_io: nil, read_limit: nil, &block_accepting_writable_io); end
-  end
-
-  # Allows a string with key material (like IV and key)
-  # to be concealed when an object holding it gets printed or show via #inspect
-  # :nodoc:
-  class KeyMaterial
-    extend Forwardable
-
-    # sord omit - no YARD type given for "str", using untyped
-    sig { params(str: T.untyped).void }
-    def initialize(str); end
-
-    # sord omit - no YARD return type given, using untyped
-    sig { returns(T.untyped) }
-    def inspect; end
   end
 
   # :nodoc:

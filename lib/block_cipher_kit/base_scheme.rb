@@ -64,7 +64,33 @@ class BlockCipherKit::BaseScheme
     buf.string
   end
 
+  def inspect
+    # A reimplementation of #inspect based largely on
+    # https://alchemists.io/articles/ruby_object_inspection
+    pattern = +""
+    values = []
+
+    instance_variables.each do |name|
+      pattern << "#{name}=%s "
+      ivar_value = instance_variable_get(name)
+      if ivar_value.is_a?(String) && key_material_instance_variable_names.include?(name)
+        values.push("[SENSITIVE(#{ivar_value.bytesize * 8} bits)]")
+      else
+        values.push(ivar_value.inspect)
+      end
+    end
+
+    format "#<%s:%#018x #{pattern.strip}>", self.class, object_id << 1, *values
+  end
+
   private
+
+  # The names of instance variables which contain key material and need to be masked in the
+  # output of BaseScheme#inspect. This prevents us from leaking the key, while allowing each
+  # subclass to define which ivars it considers sensitive.
+  def key_material_instance_variable_names
+    [:@key, :@iv]
+  end
 
   def read_copy_stream_via_cipher(source_io:, cipher:, read_limit: nil, destination_io: nil, finalize_cipher: true, &block_accepting_byte_chunks)
     writable = BlockCipherKit::BlockWritable.new(destination_io, &block_accepting_byte_chunks)
