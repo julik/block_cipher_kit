@@ -8,6 +8,9 @@ class BlockCipherKit::CipherIO
   end
 
   def write(bytes)
+    # OpenSSL ciphers fail if you update() them with an empty buffer
+    return 0 if bytes.bytesize.zero?
+
     @io.write(@cipher.update(bytes))
     # We must return the amount of bytes of input
     # we have accepted, not the amount of bytes
