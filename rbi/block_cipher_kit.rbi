@@ -1,6 +1,6 @@
 # typed: strong
 module BlockCipherKit
-  VERSION = T.let("0.0.3", T.untyped)
+  VERSION = T.let("0.0.4", T.untyped)
 
   # Allows an OpenSSL::Cipher to be written through as if it were an IO. This
   # allows the cipher to be passed to things like IO.copy_stream
